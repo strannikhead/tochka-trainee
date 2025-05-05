@@ -8,21 +8,19 @@ class HotelCapacity
 {
     private static bool CheckCapacity(int maxCapacity, List<Guest> guests)
     {
-        var dates = new List<CheckDate>();
-        foreach (var guest in guests)
-        {
-            dates.Add(new CheckDate { Date = guest.CheckIn, IsCheckIn = true });
-            dates.Add(new CheckDate { Date = guest.CheckOut, IsCheckIn = false });
-        }
+        var sortedDates = guests
+            .SelectMany(guest => new[]
+            {
+                new CheckDate { Date = guest.CheckIn, IsCheckIn = true },
+                new CheckDate { Date = guest.CheckOut, IsCheckIn = false }
+            })
+            .OrderBy(x => x.Date)
+            .ThenBy(x => x.IsCheckIn);
 
-        var sortedDates = dates.OrderBy(x => x.Date).ThenBy(x => x.IsCheckIn);
         var currentCount = 0;
         foreach (var date in sortedDates)
         {
-            if (date.IsCheckIn)
-                currentCount++;
-            else
-                currentCount--;
+            currentCount += date.IsCheckIn ? 1 : -1;
 
             if (currentCount > maxCapacity)
                 return false;
@@ -32,17 +30,17 @@ class HotelCapacity
     }
 
 
-    private class CheckDate
+    private struct CheckDate
     {
-        public string Date { get; set; }
+        public DateTime Date { get; set; }
         public bool IsCheckIn { get; set; }
     }
 
     private class Guest
     {
         public string Name { get; set; }
-        public string CheckIn { get; set; }
-        public string CheckOut { get; set; }
+        public DateTime CheckIn { get; set; }
+        public DateTime CheckOut { get; set; }
     }
 
 
@@ -81,12 +79,12 @@ class HotelCapacity
 
         var checkInMatch = Regex.Match(json, "\"check-in\"\\s*:\\s*\"([^\"]+)\"");
         if (checkInMatch.Success)
-            guest.CheckIn = checkInMatch.Groups[1].Value;
+            guest.CheckIn = DateTime.ParseExact(checkInMatch.Groups[1].Value, "yyyy-MM-dd", null);
 
 
         var checkOutMatch = Regex.Match(json, "\"check-out\"\\s*:\\s*\"([^\"]+)\"");
         if (checkOutMatch.Success)
-            guest.CheckOut = checkOutMatch.Groups[1].Value;
+            guest.CheckOut = DateTime.ParseExact(checkOutMatch.Groups[1].Value, "yyyy-MM-dd", null);
 
 
         return guest;
